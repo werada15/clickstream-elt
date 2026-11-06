@@ -1,0 +1,15 @@
+data_dir = "/var/lib/garage/data"
+metadata_dir = "/var/lib/garage/meta"
+
+db_engine = "sqlite"
+replication_factor = 1
+
+rpc_bind_addr = "0.0.0.0:3901"
+rpc_secret = "REPLACE_WITH_64_HEX_CHARACTERS"
+
+[admin]
+api_bind_addr = "0.0.0.0:3903"
+
+[s3_api]
+s3_region = "garage"
+api_bind_addr = "0.0.0.0:3900"

@@ -1,0 +1,93 @@
+x-s3-environment: &s3-environment
+  KEY: ${KEY:?Set KEY in the project .env file}
+  SECRET: ${SECRET:?Set SECRET in the project .env file}
+  S3_ENDPOINT: http://garage:3900
+  S3_REGION: garage
+
+services:
+  garage:
+    image: dxflrs/garage:v2.3.0
+    ports:
+      - "127.0.0.1:3900:3900"
+      - "127.0.0.1:3903:3903"
+    volumes:
+      - ./garage/garage.toml:/etc/garage.toml:ro
+      - ./garage/meta:/var/lib/garage/meta
+      - ./garage/data:/var/lib/garage/data
+
+  load:
+    build:
+      context: .
+      dockerfile: main/Dockerfile
+    depends_on:
+      - garage
+    environment:
+      <<: *s3-environment
+      SOURCE_FILE: /data/source/clickstream_full.csv
+      BATCH_DIR: /data/batches
+    volumes:
+      - ./data:/data
+    command: ["sh", "-c", "python extract.py && python load.py"]
+
+  decompress:
+    build:
+      context: .
+      dockerfile: main/Dockerfile
+    depends_on:
+      load:
+        condition: service_completed_successfully
+    environment:
+      <<: *s3-environment
+      RAW_DIR: /data/tmp
+    volumes:
+      - ./data:/data
+    command: ["python", "decompress.py"]
+
+  spark:
+    build:
+      context: .
+      dockerfile: spark/Dockerfile
+    depends_on:
+      decompress:
+        condition: service_completed_successfully
+    volumes:
+      - ./main:/opt/spark/work-dir:ro
+      - ./data/tmp:/opt/raw
+      - ./data/analytics:/opt/analytics
+    working_dir: /opt/spark/work-dir
+    command:
+      - /opt/spark/bin/spark-submit
+      - --master
+      - local[2]
+      - --driver-memory
+      - 4g
+      - /opt/spark/work-dir/transform.py
+
+  upload-analytics:
+    build:
+      context: .
+      dockerfile: main/Dockerfile
+    depends_on:
+      spark:
+        condition: service_completed_successfully
+    environment:
+      <<: *s3-environment
+      ANALYTICS_DIR: /data/analytics/sessions
+    volumes:
+      - ./data/analytics:/data/analytics:ro
+    command: ["python", "analytics_upload.py"]
+
+  jupyter:
+    build:
+      context: .
+      dockerfile: jupyter/Dockerfile
+    depends_on:
+      upload-analytics:
+        condition: service_completed_successfully
+    environment:
+      <<: *s3-environment
+    ports:
+      - "127.0.0.1:8888:8888"
+    volumes:
+      - ./jupyter:/home/jovyan/work
+    working_dir: /home/jovyan/work

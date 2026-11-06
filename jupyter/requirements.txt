@@ -1,0 +1,7 @@
+boto3
+jupyterlab
+matplotlib
+pandas
+pyarrow
+python-dotenv
+seaborn

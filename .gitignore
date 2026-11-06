@@ -1,0 +1,33 @@
+# Local credentials and machine-specific settings
+.env
+.env.*
+!.env.example
+/garage/garage.toml
+
+# Virtual environments and Python/Jupyter caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# Input dataset and generated pipeline data
+/data/*
+!/data/source/
+/data/source/*
+!/data/source/.gitkeep
+/data/batches/
+/data/tmp/
+/data/analytics/
+
+# Garage persistence is local state, not project source
+/garage/data/*
+!/garage/data/.gitkeep
+/garage/meta/*
+!/garage/meta/.gitkeep
+
+# Local reports, editor files, and course handouts
+/RESULTS/
+.vscode/
+*.docx
+*.log
